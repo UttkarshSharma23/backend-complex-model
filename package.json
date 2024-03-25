@@ -1,0 +1,15 @@
+{
+  "name": "backend",
+  "version": "1.0.0",
+  "description": "This is the best backend setup for any application",
+  "main": "index.js",
+  "scripts": {
+    "test": "npm start index.js"
+  },
+  "keywords": [
+    "javascript",
+    "backend"
+  ],
+  "author": "Uttkarsh Sharma",
+  "license": "ISC"
+}

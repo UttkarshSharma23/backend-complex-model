@@ -18,7 +18,7 @@ const userSchema = new Schema(
             lowecase: true,
             trim: true,
         },
-        fullname: {
+        fullName: {
             type: String,
             required: true,
             trim: true,
@@ -28,7 +28,7 @@ const userSchema = new Schema(
             type: String, // cloudinary url
             required: true,
         },
-        coverimage: {
+        coverImage: {
             type: String, // cloudinary url
         },
         watchHistory: [
@@ -61,9 +61,39 @@ userSchema.pre("save", async function (next){
     next()
 })
 
-// custom Method
+// custom Method for password Checking
 userSchema.methods.isPasswordCorrect = async function(password){
    return await bcrypt.compare(password,this.password)
 }
+
+//REVIEW : Access Token
 //Interview ques: bearer Token is JWT , whoever have this token will get the access to everything
+userSchema.methods.generateAccessToken = function(){
+    // payload
+    return   jwt.sign({
+        _id: this._id,
+        email:this.email,
+        username:this.username,
+        fullName:this.fullname
+    },
+    process.env.ACCESS_TOKEN_SECRET,
+    {
+        expiresIn:process.env.ACCESS_TOKEN_EXPIRY
+    }
+    )
+}
+
+//REVIEW Refresh Token
+userSchema.methods.generateRefreshToken = function(){
+    // payload
+    return   jwt.sign({
+        _id: this._id,
+    },
+    process.env.REFRESH_TOKEN_SECRET,
+    {
+        expiresIn:process.env.REFRESH_TOKEN_EXPIRY
+    }
+    )
+}
+
 export const User = mongoose.model("User", userSchema)

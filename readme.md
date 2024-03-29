@@ -7,3 +7,11 @@
 ---
 ## Nodemon
 - **Nodemon** is DevDependency i.e it works only till development and not used in Deployment phase 
+
+---
+## HTTP Status Codes
+- 1xx - Informational
+- 2xx - Success
+- 3xx - Redirection
+- 4xx - Client Error
+- 5xx - Server Error

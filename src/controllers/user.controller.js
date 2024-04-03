@@ -1,11 +1,14 @@
+// *-----------------------------------------------------------------import files----------------------------------------------------------------*
 import asyncHandler from "../utils/asyncHandler.js"
 import ApiError from "../utils/ApiError.js"
 import { User } from "../models/user.model.js"
 import uploadCloudinary from "../utils/cloudinary.js"
 import ApiResponse from "../utils/ApiResponse.js"
+import jwt from "jsonwebtoken"
+// *-------------------------------------------------------------Import ends here-----------------------------------------------------------------*
 
 
-// REVIEW: Creating a separate method for access token and refresh token
+// *------------------------------REVIEW: Creating a separate method for access token and refresh token ------------------------------------------*
 const generateAccessAndRefreshToken = async (userId) => {
     try {
         // find the user
@@ -27,9 +30,11 @@ const generateAccessAndRefreshToken = async (userId) => {
         throw new ApiError(500, "Something went wrong while generating access and refresh tokens");
     }
 }
+// *-------------------------------------------------End of access token and refresh token -------------------------------------------------------*
 
 
-// REVIEW: Register Controller
+
+// *-----------------------------------------------------REVIEW: Register Controller -------------------------------------------------------------*
 const registerUser = asyncHandler(async (req, res) => {
 
     /*REVIEW : Algorithm for register
@@ -114,8 +119,11 @@ const registerUser = asyncHandler(async (req, res) => {
         new ApiResponse(200, createdUser, "User Registered Successfully")
     )
 })
+// *-------------------------------------------------------End of Register Controller ------------------------------------------------------------*
 
 
+
+// *-----------------------------------------------------REVIEW: Login Controller ---------------------------------------------------------------*
 const loginUser = asyncHandler(async (req, res) => {
     const { email, username, password } = req.body
 
@@ -138,7 +146,7 @@ const loginUser = asyncHandler(async (req, res) => {
 
     const isPasswordValid = await user.isPasswordCorrect(password)
 
-    if(!isPasswordValid) {
+    if (!isPasswordValid) {
         throw new ApiError(401, "Invalid user credentials")
     }
 
@@ -160,41 +168,99 @@ const loginUser = asyncHandler(async (req, res) => {
         .cookie("refreshToken", refreshToken, options)
         .json(new ApiResponse(200, { user: loggedInUser, accessToken, refreshToken }, "User logged in successfully"))
 })
+// *----------------------------------------------------------End of LogIn Controller -----------------------------------------------------------*
 
 
-// REVIEW: Logout Controller
-const logoutUser = asyncHandler(async(req,res)=>{
-        // remove cookie
-        //remove refresh Token
-       await User.findByIdAndUpdate(
-            req.user._id,
+
+// *-----------------------------------------------------REVIEW: Logout Controller ---------------------------------------------------------------*
+const logoutUser = asyncHandler(async (req, res) => {
+    // remove cookie
+    //remove refresh Token
+    await User.findByIdAndUpdate(
+        req.user._id,
+        {
+            // updates the field
+            $set:
             {
-                // updates the field
-                $set:
-                {
-                    refreshToken: undefined
-                }
-            },
-            {
-                new: true
+                refreshToken: undefined
             }
-        )
+        },
+        {
+            new: true
+        }
+    )
 
-        const options = {
-            httpOnly:true,
-            secure:true
+    const options = {
+        httpOnly: true,
+        secure: true
+    }
+
+    return res
+        .status(200)
+        .clearCookie("accessToken", options)
+        .clearCookie("refreshToken", options)
+        .json(new ApiResponse(200, {}, "User Logged Out"))
+})
+// *----------------------------------------------------------End of Logout Controller -----------------------------------------------------------*
+
+
+
+// *-----------------------------------------------REVIEW: Refresh Access Token End-point -------------------------------------------------------*
+const refreshAccessToken = asyncHandler(async (req, res) => {
+    try {
+        // capture the token
+        const incomingRefreshToken = req.cookies.refreshToken || req.body.refreshToken
+
+        if (!incomingRefreshToken) {
+            throw new ApiError(401, "Unauthorized Request")
         }
 
+        // verify the token
+        const decodedToken = jwt.verify(
+            incomingRefreshToken, process.env.REFRESH_TOKEN_SECRET
+        )
+
+        // Getting the token from mongo database.
+        const user = await User.findById(decodedToken?._id)
+        if (!user) {
+            throw new ApiError(401, "Invalid Refresh Token")
+        }
+
+        // checking the refreshtoken and incoming token
+        if (incomingRefreshToken !== user?.refreshToken) {
+            throw new ApiError(401, "Refresh token is expired or used")
+        }
+
+        const options = {
+            httpOnly: true,
+            secure: true
+        }
+
+        const { accessToken, newrefreshToken } = await generateAccessAndRefreshToken(user._id)
+
         return res
-        .status(200)
-        .clearCookie("accessToken",options)
-        .clearCookie("refreshToken",options)
-        .json(new ApiResponse(200,{},"User Logged Out"))  
+            .status(200)
+            .cookie("accesToken", accessToken, options)
+            .cookie("refreshToken", newrefreshToken, options)
+            .json(
+                new ApiResponse(
+                    200,
+                    { accessToken, refreshToken: newrefreshToken },
+                    "Access Token refreshed"
+                )
+            )
+    } catch (error) {
+        throw new ApiError(401, error?.message || "Invalid Refresh Token")
+    }
 })
+// *---------------------------------------------------End of Refresh Access Token End-point -----------------------------------------------------*
 
 
+
+// Export files
 export {
     registerUser,
     loginUser,
-    logoutUser
+    logoutUser,
+    refreshAccessToken
 }

@@ -33,7 +33,6 @@ const generateAccessAndRefreshToken = async (userId) => {
 // *-------------------------------------------------End of access token and refresh token -------------------------------------------------------*
 
 
-
 // *-----------------------------------------------------REVIEW: Register Controller -------------------------------------------------------------*
 const registerUser = asyncHandler(async (req, res) => {
 
@@ -122,7 +121,6 @@ const registerUser = asyncHandler(async (req, res) => {
 // *-------------------------------------------------------End of Register Controller ------------------------------------------------------------*
 
 
-
 // *-----------------------------------------------------REVIEW: Login Controller ---------------------------------------------------------------*
 const loginUser = asyncHandler(async (req, res) => {
     const { email, username, password } = req.body
@@ -171,7 +169,6 @@ const loginUser = asyncHandler(async (req, res) => {
 // *----------------------------------------------------------End of LogIn Controller -----------------------------------------------------------*
 
 
-
 // *-----------------------------------------------------REVIEW: Logout Controller ---------------------------------------------------------------*
 const logoutUser = asyncHandler(async (req, res) => {
     // remove cookie
@@ -202,7 +199,6 @@ const logoutUser = asyncHandler(async (req, res) => {
         .json(new ApiResponse(200, {}, "User Logged Out"))
 })
 // *----------------------------------------------------------End of Logout Controller -----------------------------------------------------------*
-
 
 
 // *-----------------------------------------------REVIEW: Refresh Access Token End-point -------------------------------------------------------*
@@ -256,11 +252,134 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
 // *---------------------------------------------------End of Refresh Access Token End-point -----------------------------------------------------*
 
 
+// *-----------------------------------------------REVIEW: Update Current Password ---------------------------------------------------------------*
+const changeCurrentPassword = asyncHandler(async (req, res) => {
+    const { oldPassword, newPassword } = req.body
+    const user = await User.findById(req.user?._id)
+    const isPasswordCorrect = await user.isPasswordCorrect(oldPassword)
+
+    if (!isPasswordCorrect) {
+        throw new ApiError(400, "Invalid old Password")
+    }
+
+    user.password = newPassword
+    await user.save({ validateBeforeSave: false })
+
+    return res
+        .status(200)
+        .json(new ApiResponse(
+            200, {}, "Password is Changed"))
+})
+// *-----------------------------------------------------End of Update Current Password ----------------------------------------------------------*
+
+
+// *-----------------------------------------------REVIEW: Current User --------------------------------------------------------------------------*
+const getCurrentUser = asyncHandler(async (req, res) => {
+    return res.status(200).json(200, req.user, "current user fetched successfully")
+})
+// *-----------------------------------------------------End of Current User----------------------------------------------------------------------*
+
+
+// *-----------------------------------------------REVIEW: Update Account Details ---------------------------------------------------------------*
+const updateAccountDetails = asyncHandler(async (req, res) => {
+    const { fullName, email } = req.body
+    if (!fullName || !email) {
+        throw new ApiError(400, "All fields are required")
+    }
+   const user =  User.findByIdAndUpdate(
+        req.user?._id,
+        {
+            $set:{
+                fullName,
+                email
+            }
+        },
+        {new:true}
+        ).select("-password")
+
+        return res
+        .status(200)
+        .json(new ApiResponse(200, user, "Account Details updated successfully"))
+})
+// *-----------------------------------------------------End of Update Account Details ----------------------------------------------------------*
+
+
+// *-----------------------------------------------REVIEW: Update Avatar Update ---------------------------------------------------------------*
+const updateUserAvatar = asyncHandler(async(req,res)=>{
+    const avatarLocalPath = req.file?.path
+    // databse store direct
+
+    if(!avatarLocalPath){
+        throw new ApiError(400,"Avatar file is missing")
+    }
+
+    const avatar = await uploadCloudinary(avatarLocalPath)
+
+    if(!avatar.url){
+        throw new ApiError(400,"Error while uploading on avatar")
+    }
+
+   const user = await User.findByIdAndUpdate(
+        req.user?._id,
+        {
+            $set:{
+                avatar:avatar.url
+            }
+        },
+        {new:true}
+        )
+        .select("-password")
+
+        return res
+        .status(200)
+        .json(new ApiResponse(200,user,"Avatar Updated successfully"))
+})
+// *-----------------------------------------------------End of Avatar Update --------------------------------------------------------------------*
+
+
+// *-----------------------------------------------REVIEW: Update CoverImage Update --------------------------------------------------------------*
+const updateUserCoverImage = asyncHandler(async(req,res)=>{
+    const coverImageLocalPath = req.file?.path
+    // databse store direct
+
+    if(!coverImageLocalPath){
+        throw new ApiError(400,"Cover Image files is missing")
+    }
+
+    const coverImage = await uploadCloudinary(coverImageLocalPath)
+
+    if(!coverImage.url){
+        throw new ApiError(400,"Error while uploading the Image")
+    }
+
+   const user =  await User.findByIdAndUpdate(
+        req.user?._id,
+        {
+            $set:{
+                coverImage:coverImage.url
+            }
+        },
+        {new:true}
+        )
+        .select("-password")
+
+        return res
+        .status(200)
+        .json(new ApiResponse(200,user,"Cover Image Updated successfully"))
+})
+// *-----------------------------------------------------End of CoverImage Update-----------------------------------------------------------------*
+
+
 
 // Export files
 export {
     registerUser,
     loginUser,
     logoutUser,
-    refreshAccessToken
+    refreshAccessToken,
+    changeCurrentPassword,
+    getCurrentUser,
+    updateAccountDetails,
+    updateUserAvatar,
+    updateUserCoverImage
 }

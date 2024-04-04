@@ -24,7 +24,12 @@ router.route("/login").post(loginUser)
 
 // REVIEW: Logout secured route
 // secured routes with middleware
-router.route("/logout").post(verifyJWT, logoutUser)
+router.route("/logout").post(
+    verifyJWT, 
+    logoutUser)
+
+// REVIEW: Refresh Access Token route
 router.route("/refresh-token").post(refreshAccessToken)
+
 
 export default router
